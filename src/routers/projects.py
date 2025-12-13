@@ -93,6 +93,78 @@ def delete_project(project_id: str, clerk_id: str = Depends(get_current_user)):
             "message": "Project deleted successfully",
             "data": project_result.data
         }
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete project: {str(e)}")
+    
+@router.get("/api/projects/{project_id}")
+def get_project(project_id: str, clerk_id: str = Depends(get_current_user)):
+    try:
+        project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
+        if not project.data or len(project.data) == 0:
+            raise HTTPException(status_code=404, detail="Project not found or access denied")
+        
+        return {
+            "success": True,
+            "message": "Project retrieved successfully",
+            "data": project.data[0]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get project: {str(e)}")
+    
+@router.get("/api/projects/{project_id}/chats")
+def get_project_chats(project_id: str, clerk_id: str = Depends(get_current_user)):
+    try:
+        # Verify that the project belongs to the authenticated user
+        project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
+        if not project.data or len(project.data) == 0:
+            raise HTTPException(status_code=404, detail="Project not found or access denied")
+        
+        chats = supabase.table('chats').select('*').eq('project_id', project_id).execute()
+        
+        return {
+            "success": True,
+            "message": "Chats retrieved successfully",
+            "data": chats.data or []
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get chats: {str(e)}")   
+
+@router.get("/api/projects/{project_id}/settings")
+def get_project_settings(project_id: str, clerk_id: str = Depends(get_current_user)):
+    try:
+        # Verify that the project belongs to the authenticated user
+        project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
+        if not project.data or len(project.data) == 0:
+            raise HTTPException(status_code=404, detail="Project not found or access denied")
+        
+        settings = supabase.table('project_settings').select('*').eq('project_id', project_id).execute()
+        if not settings.data or len(settings.data) == 0:
+            raise HTTPException(status_code=404, detail="Project settings not found")
+        
+        return {
+            "success": True,
+            "message": "Project settings retrieved successfully",
+            "data": settings.data[0]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get project settings: {str(e)}")
+
+@router.get("/api/projects/{project_id}/files")
+def get_project_documents(project_id: str, clerk_id: str = Depends(get_current_user)):
+    try:
+        # Verify that the project belongs to the authenticated user
+        project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
+        if not project.data or len(project.data) == 0:
+            raise HTTPException(status_code=404, detail="Project not found or access denied")
+        
+        documents = supabase.table('project_documents').select('*').eq('project_id', project_id).execute()
+        
+        return {
+            "success": True,
+            "message": "Project documents retrieved successfully",
+            "data": documents.data or []  # return empty list if no documents
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get project documents: {str(e)}")
+
+    

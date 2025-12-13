@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 
+from src.routers import chats
 from src.routers import projects
 from src.routers import users
 
@@ -25,6 +26,9 @@ app.include_router(users.router)
 
 # projects router
 app.include_router(projects.router)
+
+# chats router
+app.include_router(chats.router)
 
 @app.get("/")
 def read_root():
