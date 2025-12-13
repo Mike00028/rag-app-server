@@ -17,6 +17,12 @@ async def create_webhook_user(webhook_data: dict):
             
             if not clerk_id:
                 raise HTTPException(status_code=400, detail="Invalid webhook data")
+            
+            # Check if user already exists
+            existing_user = supabase.table("users").select("*").eq("clerk_id", clerk_id).execute()
+            if existing_user.data:
+                raise HTTPException(status_code=409, detail="User already exists")
+            
             result = supabase.table("users").insert({"clerk_id": clerk_id}).execute()
             return {"message": "User created successfully,",
             "data": result.data[0]}

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 
+from src.routers import projects
 from src.routers import users
 
 
@@ -21,6 +22,9 @@ app.add_middleware(
 )
 # users router
 app.include_router(users.router)
+
+# projects router
+app.include_router(projects.router)
 
 @app.get("/")
 def read_root():
