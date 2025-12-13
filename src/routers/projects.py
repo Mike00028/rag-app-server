@@ -12,6 +12,19 @@ class ProjectCreate(BaseModel):
     name: str
     description: Optional[str] = None
 
+class ProjectSettings(BaseModel):
+    embedding_model: Optional[str] = None
+    rag_strategy: Optional[str] = None
+    agent_type: Optional[str] = None
+    chunks_per_search: Optional[int] = None
+    final_context_size: Optional[int] = None
+    similarity_threshold: Optional[float] = None
+    number_of_queries: Optional[int] = None
+    reranking_enabled: Optional[bool] = None
+    reranking_model: Optional[str] = None
+    vector_weight: Optional[float] = None
+    keyword_weight: Optional[float] = None
+
 @router.get("/api/projects") 
 def get_projects(clerk_id: str = Depends(get_current_user)): 
     """
@@ -168,3 +181,23 @@ def get_project_documents(project_id: str, clerk_id: str = Depends(get_current_u
         raise HTTPException(status_code=500, detail=f"Failed to get project documents: {str(e)}")
 
     
+@router.put("/api/projects/{project_id}/settings")
+def update_project_settings(project_id: str, settings: ProjectSettings, clerk_id: str = Depends(get_current_user)):
+    try:
+        # Verify that the project belongs to the authenticated user
+        project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
+        if not project.data or len(project.data) == 0:
+            raise HTTPException(status_code=404, detail="Project not found or access denied")
+        
+        # Update the project settings
+        result = supabase.table('project_settings').update(settings.model_dump()).eq('project_id', project_id).execute()
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=404, detail="Failed to update project settings, project settings not found")
+        
+        return {
+            "success": True,
+            "message": "Project settings updated successfully",
+            "data": result.data[0]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update project settings: {str(e)}") 

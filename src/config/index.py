@@ -12,16 +12,16 @@ if not os.getenv("SUPABASE_API_URL") or not os.getenv("SUPABASE_SECRET_KEY"):
 #     raise ValueError("CLERK_SECRET_KEY and DOMAIN must be set in .env file")
 
 
-# if (
-#     not os.getenv("S3_BUCKET_NAME")
-#     or not os.getenv("AWS_REGION")
-#     or not os.getenv("AWS_SECRET_ACCESS_KEY")
-#     or not os.getenv("AWS_ACCESS_KEY_ID")
-#     or not os.getenv("AWS_ENDPOINT_URL_S3")
-# ):
-#     raise ValueError(
-#         "S3_BUCKET_NAME, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_ENDPOINT_URL_S3 and AWS_SECRET_ACCESS_KEY must be set in .env file"
-#     )
+if (
+    not os.getenv("S3_BUCKET_NAME")
+    or not os.getenv("AWS_REGION")
+    or not os.getenv("AWS_SECRET_ACCESS_KEY")
+    or not os.getenv("AWS_ACCESS_KEY_ID")
+    or not os.getenv("AWS_ENDPOINT_URL_S3")
+):
+    raise ValueError(
+        "S3_BUCKET_NAME, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_ENDPOINT_URL_S3 and AWS_SECRET_ACCESS_KEY must be set in .env file"
+    )
 
 # if not os.getenv("REDIS_URL"):
 #     raise ValueError("REDIS_URL must be set in .env file")

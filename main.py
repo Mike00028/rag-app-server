@@ -6,6 +6,7 @@ import os
 from src.routers import chats
 from src.routers import projects
 from src.routers import users
+from src.routers import files
 
 
 app = FastAPI(
@@ -29,6 +30,10 @@ app.include_router(projects.router)
 
 # chats router
 app.include_router(chats.router)
+
+# files router
+
+app.include_router(files.router)
 
 @app.get("/")
 def read_root():
