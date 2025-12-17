@@ -41,7 +41,7 @@ def upload_file(file_content: bytes, file_name: str, content_type: str = "applic
     except Exception as e:
         raise Exception(f"Failed to upload file to S3: {str(e)}")
 
-def download_file(file_key: str) -> bytes:
+def download_file(bucket_name: str, s3_key: str, file_path: str) -> bytes:
     """
     Download a file from S3 bucket
     
@@ -52,7 +52,7 @@ def download_file(file_key: str) -> bytes:
         The file content as bytes
     """
     try:
-        response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
         return response['Body'].read()
     except Exception as e:
         raise Exception(f"Failed to download file from S3: {str(e)}")

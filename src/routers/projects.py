@@ -46,6 +46,11 @@ def get_projects(clerk_id: str = Depends(get_current_user)):
 @router.post("/api/projects")
 def create_project(project: ProjectCreate, clerk_id: str = Depends(get_current_user)):
     try:
+        # Ensure user exists in database (fallback if webhook failed)
+        existing_user = supabase.table("users").select("*").eq("clerk_id", clerk_id).execute()
+        if not existing_user.data:
+            supabase.table("users").insert({"clerk_id": clerk_id}).execute()
+        
         new_project = {
             "name": project.name,
             "description": project.description,
