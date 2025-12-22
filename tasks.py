@@ -15,11 +15,7 @@ from unstructured.partition.md import partition_md
 from unstructured.chunking.title import chunk_by_title
 from typing import Optional
 from langchain_core.messages import HumanMessage
-
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-
-llm = ChatOllama(model=os.getenv("OLLAMA_LLM_MODEL"), temperature=0)
-embeddings_model = OllamaEmbeddings(model=os.getenv("OLLAMA_EMBEDDING_MODEL"))
+from src.services.llm import llm, embeddings_model
 
 celery_app = Celery('DocumentProcessor', 
 backend='redis://localhost:6379/0',#results will be stored in redis
@@ -40,7 +36,7 @@ def update_document_status(document_id: str, status: str, details: Optional[dict
     
     if details:
         current_details.update(details)
-    
+    print(f"Updating document {document_id} status to {status} with details {details}")
     supabase.table('project_documents').update({"processing_status": status, "processing_details": current_details}).eq('id', document_id).execute()
 
 @celery_app.task
