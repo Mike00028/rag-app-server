@@ -3,8 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from src.auth import get_current_user
 from database import supabase
-from tasks import celery_app
-from tasks import process_document
+from src.services.celery import celery_app, perform_rag_ingestion_task
 from src.services.s3 import generate_presigned_upload_url, upload_file
 router = APIRouter(tags=['files'])
 class FileUploadRequest(BaseModel):
@@ -109,7 +108,7 @@ async def confirm_file_upload(project_id: str, request: dict, clerk_id: str = De
             raise HTTPException(status_code=500, detail="Invalid document data structure")
         # start background processing task here
         document_id= document_data['id']
-        task_id = process_document.delay(document_id, project_id, clerk_id)
+        task_id = perform_rag_ingestion_task.delay(document_id, project_id, clerk_id)
         supabase.table('project_documents').update({"task_id": task_id.id}).eq('id', document_id).execute()
         return {
             "success": True,

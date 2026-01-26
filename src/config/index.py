@@ -58,3 +58,9 @@ appConfig = {
     "scrapingbee_api_key": os.getenv("SCRAPINGBEE_API_KEY"),
     "tavily_api_key": os.getenv("TAVILY_API_KEY")
 }
+# Add Celery configuration URLs
+appConfig["celery_broker_url"] = os.getenv("CELERY_BROKER_URL")
+appConfig["celery_result_backend"] = os.getenv("CELERY_RESULT_BACKEND")
+
+if not appConfig["celery_broker_url"] or not appConfig["celery_result_backend"]:
+    raise ValueError("CELERY_BROKER_URL and CELERY_RESULT_BACKEND must be set in .env file")

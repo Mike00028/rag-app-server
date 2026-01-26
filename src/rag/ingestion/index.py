@@ -6,6 +6,7 @@ import os
 import tempfile
 from dotenv import load_dotenv
 from src.services import s3
+from src.config.index import appConfig
 from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.docx import partition_docx
 from unstructured.partition.html import partition_html
@@ -18,8 +19,8 @@ from langchain_core.messages import HumanMessage
 from src.services.llm import llm, embeddings_model
 
 celery_app = Celery('DocumentProcessor', 
-backend='redis://localhost:6379/0',#results will be stored in redis
-broker='redis://localhost:6379/0') # 0 redis has 16 databases by default we are using 0th database tasks are queued here
+backend=appConfig["celery_result_backend"],
+broker=appConfig["celery_broker_url"])
 load_dotenv()
 
 def update_document_status(document_id: str, status: str, details: Optional[dict] = None):
@@ -354,7 +355,6 @@ SEARCH INDEX:"""
         
     except Exception as e:
         print(f" AI summary failed: {e}")
-
 
 
 def store_chunks_with_embeddings(document_id: str, processed_chunks: list):
