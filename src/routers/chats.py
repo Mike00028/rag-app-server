@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from src.auth import get_current_user
 from database import supabase
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
 import os
+import re
+import json
 from typing import List, Dict, Tuple, Union, Any
 from langchain_core.messages import BaseMessage
 from src.services.llm import llm, embeddings_model  # Changed to use Google Gemini models
@@ -13,9 +15,12 @@ router = APIRouter(tags=['chats'])
 class ChatCreateRequest(BaseModel):
     project_id: str
     title: str
+class QueryVariations(BaseModel):
+    queries: List[str] = Field(..., description="The variations of the query")
+
 
 @router.post("/api/chats")
-def create_chat(chat_request: ChatCreateRequest, clerk_id: str = Depends(get_current_user)):
+async def create_chat(chat_request: ChatCreateRequest, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', chat_request.project_id).eq('clerk_id', clerk_id).execute()
@@ -38,7 +43,7 @@ def create_chat(chat_request: ChatCreateRequest, clerk_id: str = Depends(get_cur
         raise HTTPException(status_code=500, detail=f"Failed to create chat: {str(e)}")
     
 @router.delete("/api/chats/{chat_id}")
-def delete_chat(chat_id: str, clerk_id: str = Depends(get_current_user)):
+async def delete_chat(chat_id: str, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the chat belongs to a project of the authenticated user
         chat = supabase.table('chats').select('*, projects(clerk_id)').eq('id', chat_id).eq('clerk_id', clerk_id).execute()
@@ -175,6 +180,39 @@ def keyword_search(query: str, document_ids: List[str], settings: dict) -> List[
     return result.data if result.data else [] # type: ignore
 
 
+def generate_query_variations(original_query: str, num_queries: int = 3) -> List[str]:
+    """Generate query variations using LLM with structured output"""
+    system_prompt = f"""Generate 3 search variations for '{original_query}'. Return ONLY a JSON object matching this schema: {QueryVariations.model_json_schema()}
+    """
+    try:
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"Original query: {original_query}"),
+        ]
+        
+        # Use structured output directly
+        query_variations = llm.invoke(messages) or {}
+        # 1. Clean the response to extract JSON
+        json_str = re.sub(r'```json\n?|\n?```', '', query_variations.content).strip() #type: ignore
+
+        # 2. Parse the JSON
+        data = json.loads(json_str)
+
+        # 3. Navigate the nested "properties" structure
+        """response is in format properties: {queries: [list of queries]} """
+        query_variations = data.get("properties", {}).get("queries", [])
+
+        print(query_variations)
+        # print(f"✅ Generated {len(query_variations['queries'])} query variations")
+        # print(f"Queries: {query_variations['queries']}")
+
+        return [original_query] + query_variations[:num_queries - 1]
+    except Exception as e:
+        print(f"❌ Query variation generation failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return [original_query]
+    
 def build_context(chunks: List[Dict]) -> Tuple[List[str], List[str], List[str], List[Dict]]:
     """
     Returns:
@@ -429,14 +467,52 @@ async def send_message(
         # 3. Get document IDs for this project
         # This narrows our search scope to only documents uploaded to this specific project
         document_ids = get_document_ids(project_id)
+        #4 get rag_strategy
+        rag_strategy = settings.get('rag_strategy', 'basic')
+        print(f"🔍 Using RAG strategy: {rag_strategy}")
+        chunks  = []
+        if rag_strategy == 'basic':
+            # 5. Perform basic/vector  search  
+            chunks = hybrid_search(message, document_ids, settings)
+            print(f"✅ Retrieved {len(chunks)} relevant chunks from vector search")
+        elif rag_strategy == 'hybrid':
+            chunks = hybrid_search(message, document_ids, settings)
+            print(f"✅ Retrieved {len(chunks)} relevant chunks from hybrid search")
 
-        
-        # 4. Generate query embedding
-        # 5. Perform vector search using the RPC function 
-        chunks = keyword_search(message, document_ids, settings)
-        print(f"✅ Retrieved {len(chunks)} relevant chunks from vector search")
+        elif rag_strategy == 'multi-query-vector':
+            queries = generate_query_variations(
+                message, settings["number_of_queries"]
+            )
+            print(f"Generated {len(queries)} query variations")
 
+            all_chunks = []
+            for index, query in enumerate(queries):
+                chunks = vector_search(query, document_ids, settings)
+                all_chunks.append(chunks)
+                print(
+                    f"Vector search for query {index+1}/{len(queries)}: {query} resulted in: {len(chunks)} chunks"
+                )
 
+            chunks = rrf_rank_and_fuse(all_chunks)
+            print(f"RRF Fusion returned {len(chunks)} chunks from multi-query vector search")
+         
+        elif rag_strategy == 'multi-query-hybrid':
+            queries = generate_query_variations(
+                message, settings["number_of_queries"]
+            )
+            print(f"Generated {len(queries)} query variations")
+
+            all_chunks = []
+            for index, query in enumerate(queries):
+                chunks = hybrid_search(query, document_ids, settings)
+                all_chunks.append(chunks)
+                print(
+                    f"Multi vector Hybrid search for query {index+1}/{len(queries)}: {query} resulted in: {len(chunks)} chunks"
+                )
+
+            chunks = rrf_rank_and_fuse(all_chunks)
+            print(f"RRF Fusion returned {len(chunks)} chunks from multi-query hybrid search")
+            
         # 6. Build context from retrieved chunks
         # Format the retrieved chunks into a structured context with citations
         texts, images, tables, citations = build_context(chunks)

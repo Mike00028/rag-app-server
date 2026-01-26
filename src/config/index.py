@@ -1,7 +1,15 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment-specific .env file
+ENVIRONMENT = os.getenv("ENVIRONMENT", "local")  # default to local
+
+if ENVIRONMENT == "prod":
+    load_dotenv(".env.prod")
+    print("🚀 Loaded production environment (.env.prod)")
+else:
+    load_dotenv(".env.local")
+    print("🔧 Loaded local environment (.env.local)")
 
 if not os.getenv("SUPABASE_API_URL") or not os.getenv("SUPABASE_SECRET_KEY"):
     raise ValueError(

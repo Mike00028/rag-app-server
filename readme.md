@@ -109,7 +109,8 @@ docker-compose up -d postgres redis
 
 # Start Celery worker
 celery -A tasks worker --loglevel=info --pool=threads
-
+#Start supabase
+npx supabase start
 # Start FastAPI server
 python main.py
 ```

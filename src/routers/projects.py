@@ -26,7 +26,7 @@ class ProjectSettings(BaseModel):
     keyword_weight: Optional[float] = None
 
 @router.get("/api/projects") 
-def get_projects(clerk_id: str = Depends(get_current_user)): 
+async def get_projects(clerk_id: str = Depends(get_current_user)): 
     """
     Retrieve all projects for the authenticated user
     """
@@ -44,7 +44,7 @@ def get_projects(clerk_id: str = Depends(get_current_user)):
 
 
 @router.post("/api/projects")
-def create_project(project: ProjectCreate, clerk_id: str = Depends(get_current_user)):
+async def create_project(project: ProjectCreate, clerk_id: str = Depends(get_current_user)):
     try:
         # Ensure user exists in database (fallback if webhook failed)
         existing_user = supabase.table("users").select("*").eq("clerk_id", clerk_id).execute()
@@ -93,7 +93,7 @@ def create_project(project: ProjectCreate, clerk_id: str = Depends(get_current_u
     
 
 @router.delete("/api/projects/{project_id}")
-def delete_project(project_id: str, clerk_id: str = Depends(get_current_user)):
+async def delete_project(project_id: str, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
@@ -115,7 +115,7 @@ def delete_project(project_id: str, clerk_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Failed to delete project: {str(e)}")
     
 @router.get("/api/projects/{project_id}")
-def get_project(project_id: str, clerk_id: str = Depends(get_current_user)):
+async def get_project(project_id: str, clerk_id: str = Depends(get_current_user)):
     try:
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
         if not project.data or len(project.data) == 0:
@@ -130,7 +130,7 @@ def get_project(project_id: str, clerk_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Failed to get project: {str(e)}")
     
 @router.get("/api/projects/{project_id}/chats")
-def get_project_chats(project_id: str, clerk_id: str = Depends(get_current_user)):
+async def get_project_chats(project_id: str, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
@@ -148,7 +148,7 @@ def get_project_chats(project_id: str, clerk_id: str = Depends(get_current_user)
         raise HTTPException(status_code=500, detail=f"Failed to get chats: {str(e)}")   
 
 @router.get("/api/projects/{project_id}/settings")
-def get_project_settings(project_id: str, clerk_id: str = Depends(get_current_user)):
+async def get_project_settings(project_id: str, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
@@ -168,7 +168,7 @@ def get_project_settings(project_id: str, clerk_id: str = Depends(get_current_us
         raise HTTPException(status_code=500, detail=f"Failed to get project settings: {str(e)}")
 
 @router.get("/api/projects/{project_id}/files")
-def get_project_documents(project_id: str, clerk_id: str = Depends(get_current_user)):
+async def get_project_documents(project_id: str, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
@@ -187,7 +187,7 @@ def get_project_documents(project_id: str, clerk_id: str = Depends(get_current_u
 
     
 @router.put("/api/projects/{project_id}/settings")
-def update_project_settings(project_id: str, settings: ProjectSettings, clerk_id: str = Depends(get_current_user)):
+async def update_project_settings(project_id: str, settings: ProjectSettings, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()

@@ -13,7 +13,7 @@ class FileUploadRequest(BaseModel):
     file_type: str
 
 @router.post("/api/projects/{project_id}/files/upload-url")
-def get_file_upload_url(project_id: str, file_request: FileUploadRequest, clerk_id: str = Depends(get_current_user)):
+async def get_file_upload_url(project_id: str, file_request: FileUploadRequest, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()
@@ -84,7 +84,7 @@ def test_s3_upload():
         raise HTTPException(status_code=500, detail=f"S3 upload test failed: {str(e)}")
     
 @router.post("/api/projects/{project_id}/files/confirm")
-def confirm_file_upload(project_id: str, request: dict, clerk_id: str = Depends(get_current_user)):
+async def confirm_file_upload(project_id: str, request: dict, clerk_id: str = Depends(get_current_user)):
     try:
         if 's3_key' not in request:
             raise HTTPException(status_code=400, detail="s3_key is required in the request body")
@@ -123,7 +123,7 @@ class URLAddRequest(BaseModel):
     url: str
 
 @router.post("/api/projects/{project_id}/urls")
-def add_website_url(project_id: str, request: URLAddRequest, clerk_id: str = Depends(get_current_user)):
+async def add_website_url(project_id: str, request: URLAddRequest, clerk_id: str = Depends(get_current_user)):
     try:
         url = request.url.strip()
         if not url.startswith("http://") and not url.startswith("https://"):
@@ -158,7 +158,7 @@ def add_website_url(project_id: str, request: URLAddRequest, clerk_id: str = Dep
         raise HTTPException(status_code=500, detail=f"Failed to add website URL: {str(e)}")
     
 @router.delete("/api/projects/{project_id}/files/{document_id}")
-def delete_project_file(project_id: str, document_id: str, clerk_id: str = Depends(get_current_user)):
+async def delete_project_file(project_id: str, document_id: str, clerk_id: str = Depends(get_current_user)):
     try:
         # Verify that the project belongs to the authenticated user
         project = supabase.table('projects').select('*').eq('id', project_id).eq('clerk_id', clerk_id).execute()

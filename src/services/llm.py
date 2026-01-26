@@ -5,9 +5,63 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configure Google Gemini using OpenAI-compatible API
-google_api_key = os.getenv("GOOGLE_API_KEY")
-if google_api_key:
+ENVIRONMENT = os.getenv("ENVIRONMENT", "local")  # default to local
+
+# Create wrapper classes for Ollama models
+class OllamaLLMWrapper:
+    def __init__(self, model_name=None, temperature=0,):
+        model = model_name or os.getenv("OLLAMA_LLM_MODEL", "gemma2:9b")
+        try:
+            self.model = ChatOllama(model=model, temperature=temperature)
+            self.model_name = model
+        except Exception as e:
+            print(f"Warning: Failed to initialize Ollama LLM ({model}): {str(e)}")
+            self.model = None
+            self.model_name = model
+    
+    def invoke(self, messages):
+        if self.model is None:
+            raise Exception(f"Ollama LLM model ({self.model_name}) is not available")
+        return self.model.invoke(messages)
+
+class OllamaEmbeddingsWrapper:
+    def __init__(self, model_name=None):
+        embedding_model = model_name or os.getenv("OLLAMA_EMBEDDING_MODEL", "snowflake-arctic-embed:335m")
+        try:
+            self.model = OllamaEmbeddings(model=embedding_model)
+            self.model_name = embedding_model
+        except Exception as e:
+            print(f"Warning: Failed to initialize Ollama Embeddings ({embedding_model}): {str(e)}")
+            self.model = None
+            self.model_name = embedding_model
+    
+    def embed_documents(self, texts):
+        if self.model is None:
+            raise Exception(f"Ollama Embeddings model ({self.model_name}) is not available")
+        return self.model.embed_documents(texts)
+    
+    def embed_query(self, text):
+        if self.model is None:
+            raise Exception(f"Ollama Embeddings model ({self.model_name}) is not available")
+        return self.model.embed_query(text)
+
+# Initialize models based on environment
+if ENVIRONMENT == "local":
+    # Use Ollama models for local development
+    print(f"🔧 Using Ollama models for local development")
+    llm = OllamaLLMWrapper()
+    vision_model = OllamaLLMWrapper()
+    embeddings_model = OllamaEmbeddingsWrapper()
+    print(f"✅ Ollama LLM: {llm.model_name}")
+    print(f"✅ Ollama Embeddings: {embeddings_model.model_name}")
+else:
+    # Use Google Gemini for production
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    if not google_api_key:
+        raise ValueError("GOOGLE_API_KEY must be set for production environment")
+    
+    print(f"🚀 Using Google Gemini models for production")
+    
     # Create OpenAI client for Gemini
     gemini_client = OpenAI(
         api_key=google_api_key,
@@ -60,7 +114,7 @@ if google_api_key:
                 
                 return SimpleResponse(response.choices[0].message.content)
             return None
-    
+        
     class GeminiEmbeddings:
         def __init__(self, client):
             self.client = client
@@ -89,49 +143,7 @@ if google_api_key:
     llm = GeminiLLM(gemini_client)
     vision_model = GeminiLLM(gemini_client)  # Same model handles vision
     embeddings_model = GeminiEmbeddings(gemini_client)
-else:
-    llm = None
-    vision_model = None
-    embeddings_model = None
-    print("Warning: GOOGLE_API_KEY not found. Google Generative AI models will not be available.")
-
-# Create wrapper classes for Ollama models
-class OllamaLLMWrapper:
-    def __init__(self, model_name="llama3.2:3b", temperature=0):
-        try:
-            self.model = ChatOllama(model=model_name, temperature=temperature)
-            self.model_name = model_name
-        except Exception as e:
-            print(f"Warning: Failed to initialize Ollama LLM ({model_name}): {str(e)}")
-            self.model = None
-            self.model_name = model_name
-    
-    def invoke(self, messages):
-        if self.model is None:
-            raise Exception(f"Ollama LLM model ({self.model_name}) is not available")
-        return self.model.invoke(messages)
-
-class OllamaEmbeddingsWrapper:
-    def __init__(self, model_name=None):
-        embedding_model = model_name or os.getenv("OLLAMA_EMBEDDING_MODEL", "llama3.2:3b")
-        try:
-            self.model = OllamaEmbeddings(model=embedding_model)
-            self.model_name = embedding_model
-        except Exception as e:
-            print(f"Warning: Failed to initialize Ollama Embeddings ({embedding_model}): {str(e)}")
-            self.model = None
-            self.model_name = embedding_model
-    
-    def embed_documents(self, texts):
-        if self.model is None:
-            raise Exception(f"Ollama Embeddings model ({self.model_name}) is not available")
-        return self.model.embed_documents(texts)
-    
-    def embed_query(self, text):
-        if self.model is None:
-            raise Exception(f"Ollama Embeddings model ({self.model_name}) is not available")
-        return self.model.embed_query(text)
+    print(f"✅ Google Gemini models initialized")
 
 # Ollama models with wrapper classes
-llm_ollama = OllamaLLMWrapper(model_name="llama3.2:3b", temperature=0)
-embeddings_model_ollama = OllamaEmbeddingsWrapper()
+

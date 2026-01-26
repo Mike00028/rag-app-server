@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
+import sys
 
 from src.routers import chats
 from src.routers import projects
@@ -46,4 +47,13 @@ def health_check():
   
 
 if __name__ == "__main__":
+    # Allow environment to be set via command line: python main.py prod or python main.py production
+    if len(sys.argv) > 1:
+        env_arg = sys.argv[1].lower()
+        if env_arg in ["local", "prod", "production"]:
+            # Normalize to "local" or "prod"
+            env = "prod" if env_arg in ["prod", "production"] else "local"
+            os.environ["ENVIRONMENT"] = env
+            print(f"🌍 Environment set to: {env}")
+    
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
